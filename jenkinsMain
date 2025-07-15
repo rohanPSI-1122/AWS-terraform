@@ -7,18 +7,18 @@ pipeline {
   }
 
   stages {
-    stage('Terraform Init with Migration') {
+    stage('Clean Local State (Optional)') {
       steps {
         sh '''
-          # If local state file exists and not yet migrated
-          if [ -f terraform.tfstate ] && [ ! -f .terraform/terraform.tfstate ]; then
-            echo "Migrating local state to remote backend..."
-            terraform init -migrate-state -input=false
-          else
-            echo "Normal init (no migration required)..."
-            terraform init -input=false
-          fi
+          echo "Deleting local state to avoid migration prompt (optional)..."
+          rm -f terraform.tfstate terraform.tfstate.backup
         '''
+      }
+    }
+
+    stage('Terraform Init') {
+      steps {
+        sh 'terraform init -input=false'
       }
     }
 
