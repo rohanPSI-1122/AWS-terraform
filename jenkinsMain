@@ -1,18 +1,27 @@
 pipeline {
-  agent {label 'ubuntu'}
+  agent {label "ubuntu"}
 
   environment {
-    AWS_ACCESS_KEY_ID     = credentials('aws-access-key-id')     // Secret text
-    AWS_SECRET_ACCESS_KEY = credentials('aws-secret-access-key') // Secret text
+    AWS_ACCESS_KEY_ID     = credentials('aws-access-key-id')
+    AWS_SECRET_ACCESS_KEY = credentials('aws-secret-access-key')
   }
 
   stages {
-    stage('Terraform') {
+    stage('Terraform Init (Auto-Migrate Backend)') {
       steps {
         sh '''
-          terraform init
-          terraform apply -auto-approve
+          # Detect whether state already exists in S3 by trying to init with migration
+          terraform init -migrate-state -input=false -reconfigure || {
+            echo "Fallback to normal init without migration"
+            terraform init -input=false -reconfigure
+          }
         '''
+      }
+    }
+
+    stage('Terraform Apply') {
+      steps {
+        sh 'terraform apply -auto-approve'
       }
     }
   }
