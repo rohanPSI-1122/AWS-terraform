@@ -1,25 +1,26 @@
 pipeline {
-  agent {label "ubuntu"}
+  agent { label "ubuntu" }
 
   environment {
     AWS_ACCESS_KEY_ID     = credentials('aws-access-key-id')
     AWS_SECRET_ACCESS_KEY = credentials('aws-secret-access-key')
   }
 
-  stage('Terraform Init with Migration') {
-  steps {
-    sh '''
-      # If local state file exists and not yet migrated
-      if [ -f terraform.tfstate ] && [ ! -f .terraform/terraform.tfstate ]; then
-        echo "Migrating local state to remote backend..."
-        terraform init -migrate-state -input=false
-      else
-        echo "Normal init (no migration required)..."
-        terraform init -input=false
-      fi
-    '''
-  }
-}
+  stages {
+    stage('Terraform Init with Migration') {
+      steps {
+        sh '''
+          # If local state file exists and not yet migrated
+          if [ -f terraform.tfstate ] && [ ! -f .terraform/terraform.tfstate ]; then
+            echo "Migrating local state to remote backend..."
+            terraform init -migrate-state -input=false
+          else
+            echo "Normal init (no migration required)..."
+            terraform init -input=false
+          fi
+        '''
+      }
+    }
 
     stage('Terraform Apply') {
       steps {
