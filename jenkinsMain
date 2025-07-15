@@ -1,5 +1,5 @@
 pipeline {
-  agent { label "ubuntu" }
+  agent { label 'ubuntu' }
 
   environment {
     AWS_ACCESS_KEY_ID     = credentials('aws-access-key-id')
@@ -7,10 +7,16 @@ pipeline {
   }
 
   stages {
-    stage('Clean Local State (Optional)') {
+    
+    stage('Clean Local State (First-Time Setup Only)') {
+      when {
+        expression {
+          return !fileExists(".terraform/terraform.tfstate") && fileExists("terraform.tfstate")
+        }
+      }
       steps {
         sh '''
-          echo "Deleting local state to avoid migration prompt (optional)..."
+          echo "First-time backend setup: removing local state to avoid migration prompt..."
           rm -f terraform.tfstate terraform.tfstate.backup
         '''
       }
@@ -18,13 +24,41 @@ pipeline {
 
     stage('Terraform Init') {
       steps {
-        sh 'terraform init -input=false'
+        sh '''
+          echo "Initializing Terraform..."
+          terraform init -input=false -reconfigure
+        '''
+      }
+    }
+
+    stage('Terraform Plan') {
+      steps {
+        sh 'terraform plan'
       }
     }
 
     stage('Terraform Apply') {
       steps {
         sh 'terraform apply -auto-approve'
+      }
+    }
+
+    stage('Commit Terraform Lock File') {
+      steps {
+        withCredentials([usernamePassword(
+          credentialsId: 'git-token',
+          usernameVariable: 'GIT_USERNAME',
+          passwordVariable: 'GIT_PASSWORD'
+        )]) {
+          sh '''
+            git config user.name "$GIT_USERNAME"
+            git config user.email "$GIT_USERNAME@users.noreply.github.com"
+
+            git add .terraform.lock.hcl
+            git commit -m "Update Terraform lock file" || echo "No changes to commit"
+            git push https://$GIT_USERNAME:$GIT_PASSWORD@github.com/rohanPSI-1122/AWS-terraform.git HEAD:main || echo "No changes to push"
+          '''
+        }
       }
     }
   }
