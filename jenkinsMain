@@ -46,7 +46,7 @@ pipeline {
     stage('Commit Terraform Lock File') {
       steps {
         withCredentials([usernamePassword(
-          credentialsId: 'git-token',
+          credentialsId: 'rohanPSI-1122',
           usernameVariable: 'GIT_USERNAME',
           passwordVariable: 'GIT_PASSWORD'
         )]) {
