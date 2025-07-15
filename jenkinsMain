@@ -6,18 +6,20 @@ pipeline {
     AWS_SECRET_ACCESS_KEY = credentials('aws-secret-access-key')
   }
 
-  stages {
-    stage('Terraform Init (Auto-Migrate Backend)') {
-      steps {
-        sh '''
-          # Detect whether state already exists in S3 by trying to init with migration
-          terraform init -migrate-state -input=false -reconfigure || {
-            echo "Fallback to normal init without migration"
-            terraform init -input=false -reconfigure
-          }
-        '''
-      }
-    }
+  stage('Terraform Init with Migration') {
+  steps {
+    sh '''
+      # If local state file exists and not yet migrated
+      if [ -f terraform.tfstate ] && [ ! -f .terraform/terraform.tfstate ]; then
+        echo "Migrating local state to remote backend..."
+        terraform init -migrate-state -input=false
+      else
+        echo "Normal init (no migration required)..."
+        terraform init -input=false
+      fi
+    '''
+  }
+}
 
     stage('Terraform Apply') {
       steps {
